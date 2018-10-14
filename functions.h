@@ -22,6 +22,8 @@
 
 #include <sys/ioctl.h>
 
+#include <libnet.h>
+
 #include <time.h>
 #include <pthread.h>
 
@@ -83,4 +85,5 @@ void MAKE_ARPREP_STRUCT(my_etharp_hdr *arp_struct, uint8_t *source_MAC_array, ui
 
 bool GET_SENDER_MAC(uint8_t *sender_MAC_array, int sender_IP_int, pcap_t *handle, pcap_pkthdr *header, const uint8_t *packet);
 
+void *SEND_ARP(void *info);
 void *BLOCK_RECOVERY(void *info);

