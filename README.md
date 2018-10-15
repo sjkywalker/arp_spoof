@@ -28,6 +28,24 @@ Poisons the sender *and* the target's arp table and sniffs network packets (ethe
     * target -> attacker -> sender: (pkt.smac == target.mac) && (pkt.dmac == attacker.mac) && (pkt.dip != attacker.ip)
     * **should not filter with source ip, since packets incoming from outside the network will have different source ip address from sender and target**
 
+### Interface
+
+There are four classes in how network packet flows are displayed.
+
+* [  INIT  ]
+    * The first fake ARP packet sent to sender and target
+    * [- INIT -] when error, followed by error message
+* [  PROD  ]
+    * Fake ARP replies sent periodically
+    * [- PROD -] when error, followed by error message
+* [  RINF  ]
+    * Reinfection ARP packets
+    * Reinfection occurs when ARP request broadcast is sensed
+    * [- RINF -] when error, followed by error message
+* [  RLAY  ]
+    * Relayed ETHERTYPE IP packets
+    * [- RLAY -] when error, followed by error message
+
 ### Development Environment
 
 ### Prerequisites
