@@ -37,6 +37,8 @@
 #define ARP_OPER_RQ   1
 #define ARP_OPER_RP   2
 
+// SEND_ARP period in seconds
+#define SEND_ARP_PERIOD 5
 
 #pragma pack(push, 1)
 
