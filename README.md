@@ -48,6 +48,17 @@ There are four classes in how network packet flows are displayed.
 
 ### Development Environment
 
+```txt
+$ uname -a
+Linux ubuntu 4.15.0-36-generic #39~16.04.1-Ubuntu SMP Tue Sep 25 08:59:23 UTC 2018 x86_64 x86_64 x86_64 GNU/Linux
+
+$ g++ --version
+g++ (Ubuntu 5.4.0-6ubuntu1~16.04.10) 5.4.0 20160609
+Copyright (C) 2015 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+```
+
 ### Prerequisites
 
 This program includes the following headers. Make sure you have the right packages.
