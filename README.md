@@ -124,6 +124,7 @@ You might need root priviledges to capture, send, and monitor network packets.
 * [Get my IP address](https://www.sanfoundry.com/c-program-get-ip-address/)
 * [Get my MAC address](https://stackoverflow.com/questions/1779715/how-to-get-mac-address-of-your-machine-using-a-c-program)
 * [Send ARP](https://github.com/sjkywalker/send_arp)
+* [ARP Spoofing](https://gitlab.com/gilgil/network/wikis/arp-spoofing/arp-spoofing)
 
 ## Authors
 
