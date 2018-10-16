@@ -32,19 +32,19 @@ Poisons the sender *and* the target's arp table and sniffs network packets (ethe
 
 There are four classes in how network packet flows are displayed.
 
-* [  INIT  ]
+* `[  INIT  ]`
     * The first fake ARP packet sent to sender and target
-    * [- INIT -] when error, followed by error message
-* [  PROD  ]
+    * `[- INIT -]` when error, followed by error message
+* `[  PROD  ]`
     * Fake ARP replies sent periodically
-    * [- PROD -] when error, followed by error message
-* [  RINF  ]
+    * `[- PROD -]` when error, followed by error message
+* `[  RINF  ]`
     * Reinfection ARP packets
     * Reinfection occurs when ARP request broadcast is sensed
-    * [- RINF -] when error, followed by error message
-* [  RLAY  ]
+    * `[- RINF -]` when error, followed by error message
+* `[  RLAY  ]`
     * Relayed ETHERTYPE IP packets
-    * [- RLAY -] when error, followed by error message
+    * `[- RLAY -]` when error, followed by error message
 
 ### Development Environment
 
