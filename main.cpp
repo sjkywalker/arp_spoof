@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	{
 		if (time(NULL) > start + 5) { puts("[-] Failed to get sender MAC address"); puts("[*] Exiting program with -1"); exit(EXIT_FAILURE); }
 		if (pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"pcap_sendpacket error"); }
-		if(GET_SENDER_MAC(sender_MAC_array, sender_IP_int, handle, header, packet)) { break; }
+		if (GET_SENDER_MAC(sender_MAC_array, sender_IP_int, handle, header, packet)) { break; }
 	} while(1);
 	printf("[Sender   MAC Address] "); PRINT_MAC(sender_MAC_array); puts("\n");
 
@@ -82,8 +82,8 @@ int main(int argc, char *argv[])
 	do
 	{
 		if (time(NULL) > start + 5) { puts("[-] Failed to get target MAC address"); puts("[*] Exiting program with -1"); exit(EXIT_FAILURE); }
-		if(pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"pcap_sendpacket error"); }
-		if(GET_SENDER_MAC(target_MAC_array, target_IP_int, handle, header, packet)) { break; }
+		if (pcap_sendpacket(handle, (uint8_t *)arp_request, sizeof(my_etharp_hdr))) { pcap_perror(handle, (char *)"pcap_sendpacket error"); }
+		if (GET_SENDER_MAC(target_MAC_array, target_IP_int, handle, header, packet)) { break; }
 	} while(1);
 	printf("[Target   MAC Address] "); PRINT_MAC(target_MAC_array); puts("\n");
 
